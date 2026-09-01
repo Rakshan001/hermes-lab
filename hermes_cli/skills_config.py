@@ -52,7 +52,8 @@ def get_disabled_skills(config: dict, platform: Optional[str] = None) -> Set[str
     skills_cfg = config.get("skills") or {}
     if not isinstance(skills_cfg, dict):
         return set()
-    from agent.skill_utils import ESSENTIAL_SKILLS
+    from agent.skill_utils import _protected_skills
+    ESSENTIAL_SKILLS = _protected_skills(config)
     global_disabled = _normalize_skill_names(skills_cfg.get("disabled"))
     if platform is None:
         return global_disabled - ESSENTIAL_SKILLS
@@ -70,8 +71,8 @@ def save_disabled_skills(config: dict, disabled: Set[str], platform: Optional[st
     Essential skills (e.g. ``hermes-agent``) are silently dropped from the
     list — they cannot be disabled from any surface.
     """
-    from agent.skill_utils import ESSENTIAL_SKILLS
-    disabled = set(disabled) - ESSENTIAL_SKILLS
+    from agent.skill_utils import _protected_skills
+    disabled = set(disabled) - _protected_skills(config)
     config.setdefault("skills", {})
     if platform is None:
         config["skills"]["disabled"] = sorted(disabled)

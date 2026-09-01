@@ -2094,11 +2094,7 @@ def _build_skills_system_prompt_inner(
             "Skills also encode the user's preferred approach, conventions, and quality standards "
             "for tasks like code review, planning, and testing — load them even for tasks you "
             "already know how to do, because the skill defines how it should be done here.\n"
-            "Whenever the user asks you to configure, set up, install, enable, disable, modify, "
-            "or troubleshoot Hermes Agent itself — its CLI, config, models, providers, tools, "
-            "skills, voice, gateway, plugins, or any feature — load the `hermes-agent` skill "
-            "first. It has the actual commands (e.g. `hermes config set …`, `hermes tools`, "
-            "`hermes setup`) so you don't have to guess or invent workarounds.\n"
+            + _hermes_self_config_pointer() +
             "If a skill has issues, fix it with skill_manage(action='patch').\n"
             "After difficult/iterative tasks, offer to save as a skill. "
             "If a skill you loaded was missing steps, had wrong commands, or needed "
@@ -2123,6 +2119,31 @@ def _build_skills_system_prompt_inner(
 
 
 # =========================================================================
+def _hermes_self_config_pointer() -> str:
+    """Sentence telling the model to load the ``hermes-agent`` skill for
+    self-configuration, or "" on a white-labelled deployment.
+
+    It names the engine four times, so it survives a SOUL.md identity and
+    reads to the model as its own name. Gated on the same
+    ``agent.hermes_help_guidance`` flag that drops the engine pointer from
+    the system prompt, so one switch covers both.
+    """
+    try:
+        from hermes_cli.config import read_raw_config
+        agent_cfg = (read_raw_config() or {}).get("agent") or {}
+        if isinstance(agent_cfg, dict) and agent_cfg.get("hermes_help_guidance") is False:
+            return ""
+    except Exception:
+        pass
+    return (
+        "Whenever the user asks you to configure, set up, install, enable, disable, modify, "
+        "or troubleshoot Hermes Agent itself — its CLI, config, models, providers, tools, "
+        "skills, voice, gateway, plugins, or any feature — load the `hermes-agent` skill "
+        "first. It has the actual commands (e.g. `hermes config set …`, `hermes tools`, "
+        "`hermes setup`) so you don't have to guess or invent workarounds.\n"
+    )
+
+
 # Context files (SOUL.md, AGENTS.md, .cursorrules)
 # =========================================================================
 

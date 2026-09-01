@@ -84,3 +84,54 @@ cp branding/SOUL.md ~/.hermes/SOUL.md
 
 The CLI startup banner (`skin.branding.agent_name`) still shows the engine name.
 Cosmetic and CLI-only; it does not affect Telegram or any messaging surface.
+
+## The engine name leaks from four places, not one
+
+Setting `SOUL.md` alone is not enough. Each of these independently reintroduces
+the engine name, and the model reconciles them into "I'm X, but here I'm known
+as Y":
+
+| # | Source | Fix |
+|---|---|---|
+| 1 | `DEFAULT_AGENT_IDENTITY` (`prompt_builder.py:151`) | `SOUL.md` replaces it |
+| 2 | `HERMES_AGENT_HELP_GUIDANCE` (`prompt_builder.py:161`) | `agent.hermes_help_guidance: false` |
+| 3 | Skills-index preamble (`prompt_builder.py:2097`) | same flag, via `_hermes_self_config_pointer()` |
+| 4 | Skill index entries naming the engine | `skills.disabled` |
+
+Source 3 names the engine four times in one paragraph and is the loudest after
+the identity itself. Source 4 includes `hermes-agent`, which is in
+`ESSENTIAL_SKILLS` and normally cannot be disabled — the same flag lifts that
+protection via `_protected_skills()`, on the reasoning that an end user of a
+white-labelled product is not the person repairing the install.
+
+### What still mentions the engine
+
+Five incidental references remain in the Telegram prompt: profile paths
+(`~/.hermes/profiles/`), a sandbox note ("the machine where Hermes itself is
+running"), the out-of-band message mechanism, and a skill description
+referencing `.hermes/plans/`. None assert an identity. Removing them would mean
+renaming the config directory, which is out of scope here.
+
+### Verifying
+
+Sizes are not enough — dump the real prompt and grep it:
+
+```bash
+python -c "
+import sys; sys.path.insert(0,'.')
+from hermes_cli.prompt_size import _build_inspection_agent
+from agent.system_prompt import build_system_prompt
+p = build_system_prompt(_build_inspection_agent('telegram'))
+print('Foxwel      :', 'Foxwel Studio Assistant' in p)
+print('Hermes Agent:', 'Hermes Agent' in p)
+print('Nous        :', 'Nous Research' in p)"
+```
+
+Want `True, False, False`.
+
+### Existing chats keep the old identity
+
+`session_reset.mode: none` means a Telegram conversation keeps its full history.
+Replies from before the rebrand are still in context, and the model imitates
+them. Test in a **fresh chat**, or reset the existing session — otherwise a
+correct prompt still produces the old answer.
