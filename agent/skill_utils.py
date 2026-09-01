@@ -443,6 +443,27 @@ def _load_raw_config() -> Dict[str, Any]:
 ESSENTIAL_SKILLS: frozenset = frozenset({"hermes-agent"})
 
 
+def _protected_skills(parsed: dict | None = None) -> frozenset:
+    """ESSENTIAL_SKILLS, unless this is a white-labelled deployment.
+
+    The ``hermes-agent`` skill is protected because a user who breaks their
+    install still needs it to recover. But its index entry names the engine
+    ("troubleshoot Hermes Agent itself"), which leaks the branding a white
+    label exists to hide — and an end user of a white-labelled product is
+    not the person repairing the install. So ``agent.hermes_help_guidance:
+    false`` — the same switch that drops the engine pointer from the system
+    prompt — also makes this skill disableable.
+    """
+    try:
+        cfg = parsed if parsed is not None else _load_raw_config()
+        agent_cfg = (cfg or {}).get("agent") or {}
+        if isinstance(agent_cfg, dict) and agent_cfg.get("hermes_help_guidance") is False:
+            return frozenset()
+    except Exception:
+        pass
+    return ESSENTIAL_SKILLS
+
+
 def get_disabled_skill_names(platform: str | None = None) -> Set[str]:
     """Read disabled skill names from config.yaml.
 
@@ -479,8 +500,8 @@ def get_disabled_skill_names(platform: str | None = None) -> Set[str]:
         if platform_disabled is not None:
             return (
                 global_disabled | _normalize_string_set(platform_disabled)
-            ) - ESSENTIAL_SKILLS
-    return global_disabled - ESSENTIAL_SKILLS
+            ) - _protected_skills(parsed)
+    return global_disabled - _protected_skills(parsed)
 
 
 def parse_config_string_list(value) -> List[str]:
