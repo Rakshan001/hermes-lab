@@ -313,7 +313,11 @@ FAL_MODELS: Dict[str, Dict[str, Any]] = {
             # cost at the same size; "low" is too rough for production use.
             "quality": "medium",
             "num_images": 1,
-            "output_format": "png",
+            # JPEG, not PNG: Instagram's Content Publishing API rejects PNG
+            # media containers, and `image_generate` exposes no way for the
+            # agent to override this. Every other consumer (Telegram, local
+            # files) handles JPEG fine, so this is the safe default here.
+            "output_format": "jpeg",
         },
         "supports": {
             "prompt", "image_size", "quality", "num_images", "output_format",
