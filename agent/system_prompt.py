@@ -396,11 +396,15 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
     # itself. When the session has no skill tools (Blank Slate with the skills
     # toolset off), skill_view() would be a dangling reference — inject the
     # docs-only variant instead. Toolset is fixed per-session, so cache-safe.
+    # Gated by config.yaml ``agent.hermes_help_guidance`` (default True) so a
+    # white-labelled deployment can suppress it. The block names the engine and
+    # its vendor, which defeats a SOUL.md identity override on its own.
     _has_skill_view = "skill_view" in (agent.valid_tool_names or set())
-    stable_parts.append(
-        HERMES_AGENT_HELP_GUIDANCE if _has_skill_view
-        else HERMES_AGENT_HELP_GUIDANCE_NO_SKILLS
-    )
+    if getattr(agent, "_hermes_help_guidance", True):
+        stable_parts.append(
+            HERMES_AGENT_HELP_GUIDANCE if _has_skill_view
+            else HERMES_AGENT_HELP_GUIDANCE_NO_SKILLS
+        )
 
     # Universal task-completion / no-fabrication guidance.  Applied to ALL
     # models regardless of tool_use_enforcement gating — the failure modes

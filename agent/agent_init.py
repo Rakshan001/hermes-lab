@@ -2041,6 +2041,11 @@ def init_agent(
     # single turn; the runtime already executes such batches concurrently.
     agent._parallel_tool_call_guidance = bool(_agent_section.get("parallel_tool_call_guidance", True))
 
+    # Hermes self-help guidance toggle.  Default True.  Set False for a
+    # white-labelled deployment: the block tells the model it runs on Hermes
+    # Agent by Nous Research, which overrides any SOUL.md identity.
+    agent._hermes_help_guidance = bool(_agent_section.get("hermes_help_guidance", True))
+
     # Local Python toolchain probe toggle.  Default True.  When False,
     # the probe is skipped entirely (no subprocess calls, no system-prompt
     # line).  Useful for users on exotic setups where the probe heuristics
